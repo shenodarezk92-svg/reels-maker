@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, send_file
 import subprocess
 import requests
 import os
@@ -11,7 +11,7 @@ MUSIC_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 @app.route('/make-video', methods=['POST'])
 def make_video():
     data = request.json
-    image_url = data.get('image_url')
+    image_url = data.get('image_url') or data.get('imageUrl')
     
     img_path = f"/tmp/{uuid.uuid4()}.jpg"
     music_path = "/tmp/music.mp3"
