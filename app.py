@@ -1,11 +1,9 @@
 import subprocess, os, uuid
-from flask import Flask, request, send_file
+from flask import Flask, request
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
 
 app = Flask(__name__)
-VIDEO_DIR = "/tmp/videos"
-os.makedirs(VIDEO_DIR, exist_ok=True)
 
 @app.route('/files', methods=['GET'])
 def list_files():
@@ -18,7 +16,7 @@ def make_video():
     text = data['text']
     uid = str(uuid.uuid4())[:8]
     img_path = f"/tmp/{uid}.png"
-    out_path = f"{VIDEO_DIR}/{uid}.mp4"
+    out_path = f"/tmp/{uid}.mp4"
 
     img = Image.open("bg.jpg").convert("RGB")
     img = img.resize((1080, 1920))
@@ -60,18 +58,17 @@ def make_video():
         out_path
     ]
     subprocess.run(cmd, check=True)
+
+    with open(out_path, 'rb') as f:
+        video_data = f.read()
+
     os.remove(img_path)
+    os.remove(out_path)
 
-    # ✅ رجّع URL بدل binary
-    base_url = request.host_url.rstrip('/')
-    video_url = f"{base_url}/video/{uid}.mp4"
-    return {'url': video_url}
-
-# ✅ endpoint جديد لتحميل الفيديو
-@app.route('/video/<filename>', methods=['GET'])
-def serve_video(filename):
-    path = os.path.join(VIDEO_DIR, filename)
-    return send_file(path, mimetype='video/mp4')
+    return app.response_class(
+        response=video_data,
+        mimetype='video/mp4'
+    )
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
