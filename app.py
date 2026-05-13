@@ -2,10 +2,12 @@ import requests, subprocess, os, uuid
 from flask import Flask, request
 
 app = Flask(__name__)
+
 @app.route('/files', methods=['GET'])
 def list_files():
     files = os.listdir('.')
     return {'files': files}
+
 @app.route('/make-video', methods=['POST'])
 def make_video():
     data = request.json
@@ -21,19 +23,14 @@ def make_video():
 
     cmd = [
         "ffmpeg", "-y",
-        "-loop", "1", "-i", "bg.jpg",
         "-loop", "1", "-i", img_path,
         "-i", "music.mp3",
-        "-filter_complex",
-        "[0:v]scale=1080:1920,setsar=1[bg];"
-        "[1:v]scale=1080:1920[txt];"
-        "[bg][txt]overlay=0:0[v]",
-        "-map", "[v]",
-        "-map", "2:a",
         "-c:v", "libx264",
+        "-preset", "ultrafast",
+        "-tune", "stillimage",
         "-c:a", "aac",
         "-t", "15",
-        "-shortest",
+        "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1",
         "-pix_fmt", "yuv420p",
         out_path
     ]
