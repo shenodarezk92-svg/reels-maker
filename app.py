@@ -1,55 +1,51 @@
-from flask import Flask, request, send_file, jsonify
-import subprocess
-import requests
-import os
-import uuid
+import requests, subprocess, os, uuid
+from flask import Flask, request
 
 app = Flask(__name__)
-MUSIC_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
 
 @app.route('/make-video', methods=['POST'])
 def make_video():
-    try:
-        data = request.json
-        image_url = data.get('image_url') or data.get('imageUrl')
+    data = request.json
+    image_url = data['image_url']
 
-        if not image_url:
-            return jsonify({"error": "image_url is required"}), 400
+    uid = str(uuid.uuid4())[:8]
+    img_path = f"/tmp/{uid}.jpg"
+    out_path = f"/tmp/{uid}.mp4"
 
-        img_path = f"/tmp/{uuid.uuid4()}.jpg"
-        music_path = "/tmp/music.mp3"
-        out_path = f"/tmp/{uuid.uuid4()}.mp4"
+    img_data = requests.get(image_url, timeout=30)
+    with open(img_path, 'wb') as f:
+        f.write(img_data.content)
 
-        r = requests.get(image_url, timeout=30)
-        with open(img_path, 'wb') as f:
-            f.write(r.content)
+    cmd = [
+        "ffmpeg", "-y",
+        "-loop", "1", "-i", "bg.jpg",
+        "-loop", "1", "-i", img_path,
+        "-i", "music.mp3",
+        "-filter_complex",
+        "[0:v]scale=1080:1920,setsar=1[bg];"
+        "[1:v]scale=1080:1920[txt];"
+        "[bg][txt]overlay=0:0[v]",
+        "-map", "[v]",
+        "-map", "2:a",
+        "-c:v", "libx264",
+        "-c:a", "aac",
+        "-t", "15",
+        "-shortest",
+        "-pix_fmt", "yuv420p",
+        out_path
+    ]
+    subprocess.run(cmd, check=True)
 
-        if not os.path.exists(music_path):
-            r = requests.get(MUSIC_URL, timeout=60)
-            with open(music_path, 'wb') as f:
-                f.write(r.content)
+    with open(out_path, 'rb') as f:
+        video_data = f.read()
 
-        result = subprocess.run([
-            'ffmpeg', '-y', '-loop', '1', '-i', img_path,
-            '-i', music_path,
-            '-vf', 'scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black',
-            '-c:v', 'libx264', '-t', '15',
-            '-pix_fmt', 'yuv420p',
-            '-c:a', 'aac', '-shortest',
-            '-preset', 'ultrafast',
-            out_path
-        ], timeout=120, capture_output=True)
+    os.remove(img_path)
+    os.remove(out_path)
 
-        if result.returncode != 0:
-            return jsonify({"error": result.stderr.decode()}), 500
-
-        if not os.path.exists(out_path):
-            return jsonify({"error": "Video file not created"}), 500
-
-        return send_file(out_path, mimetype='video/mp4')
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return app.response_class(
+        response=video_data,
+        mimetype='video/mp4'
+    )
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=10000)
