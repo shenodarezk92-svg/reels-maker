@@ -2,7 +2,10 @@ import requests, subprocess, os, uuid
 from flask import Flask, request
 
 app = Flask(__name__)
-
+@app.route('/files', methods=['GET'])
+def list_files():
+    files = os.listdir('.')
+    return {'files': files}
 @app.route('/make-video', methods=['POST'])
 def make_video():
     data = request.json
