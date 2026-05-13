@@ -1,5 +1,7 @@
-import requests, subprocess, os, uuid
+import subprocess, os, uuid
 from flask import Flask, request
+from PIL import Image, ImageDraw, ImageFont
+import textwrap
 
 app = Flask(__name__)
 
@@ -11,14 +13,42 @@ def list_files():
 @app.route('/make-video', methods=['POST'])
 def make_video():
     data = request.json
-    image_url = data['image_url']
+    text = data['text']
     uid = str(uuid.uuid4())[:8]
     img_path = f"/tmp/{uid}.png"
     out_path = f"/tmp/{uid}.mp4"
 
-    img_data = requests.get(image_url, timeout=30)
-    with open(img_path, 'wb') as f:
-        f.write(img_data.content)
+    # افتح bg.jpg وحط النص عليها
+    img = Image.open("bg.jpg").convert("RGB")
+    img = img.resize((1080, 1920))
+    draw = ImageDraw.Draw(img)
+
+    # overlay شفاف
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 100))
+    img = img.convert("RGBA")
+    img = Image.alpha_composite(img, overlay)
+    img = img.convert("RGB")
+    draw = ImageDraw.Draw(img)
+
+    # الخط
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 70)
+    except:
+        font = ImageFont.load_default()
+
+    # تقسيم النص
+    lines = textwrap.wrap(text, width=20)
+    total_height = len(lines) * 90
+    y = (1920 - total_height) // 2
+
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font)
+        w = bbox[2] - bbox[0]
+        x = (1080 - w) // 2
+        draw.text((x, y), line, font=font, fill="white")
+        y += 90
+
+    img.save(img_path)
 
     cmd = [
         "ffmpeg", "-y",
@@ -28,7 +58,7 @@ def make_video():
         "-preset", "ultrafast",
         "-c:a", "aac",
         "-t", "15",
-        "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1",
+        "-vf", "scale=1080:1920,setsar=1",
         "-pix_fmt", "yuv420p",
         out_path
     ]
