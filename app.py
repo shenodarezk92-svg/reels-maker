@@ -12,7 +12,6 @@ def list_files():
 def make_video():
     data = request.json
     image_url = data['image_url']
-
     uid = str(uuid.uuid4())[:8]
     img_path = f"/tmp/{uid}.png"
     out_path = f"/tmp/{uid}.mp4"
@@ -29,10 +28,11 @@ def make_video():
         "-preset", "ultrafast",
         "-c:a", "aac",
         "-t", "15",
-        "-vf", "scale=1080:1920,setsar=1",
+        "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1",
         "-pix_fmt", "yuv420p",
         out_path
     ]
+
     subprocess.run(cmd, check=True)
 
     with open(out_path, 'rb') as f:
