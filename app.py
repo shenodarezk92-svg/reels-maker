@@ -32,7 +32,7 @@ def make_video():
 
     # الخط
     try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 70)
+        font = ImageFont.truetype("font.otf", 70)
     except:
         font = ImageFont.load_default()
 
