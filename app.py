@@ -7,18 +7,9 @@ app = Flask(__name__)
 VIDEO_DIR = "/tmp/videos"
 os.makedirs(VIDEO_DIR, exist_ok=True)
 
-@app.route('/files', methods=['GET'])
-def list_files():
-    files = os.listdir('.')
-    return {'files': files}
-
-@app.route('/make-video', methods=['POST'])
-def make_video():
-    data = request.json
-    text = data['text']
+def create_video(text, out_path):
     uid = str(uuid.uuid4())[:8]
     img_path = f"/tmp/{uid}.png"
-    out_path = f"{VIDEO_DIR}/{uid}.mp4"
 
     img = Image.open("bg.jpg").convert("RGB")
     img = img.resize((1080, 1920))
@@ -61,6 +52,38 @@ def make_video():
     ]
     subprocess.run(cmd, check=True)
     os.remove(img_path)
+
+@app.route('/files', methods=['GET'])
+def list_files():
+    files = os.listdir('.')
+    return {'files': files}
+
+@app.route('/make-video', methods=['POST'])
+def make_video():
+    data = request.json
+    text = data['text']
+    uid = str(uuid.uuid4())[:8]
+    out_path = f"/tmp/{uid}.mp4"
+
+    create_video(text, out_path)
+
+    with open(out_path, 'rb') as f:
+        video_data = f.read()
+    os.remove(out_path)
+
+    return app.response_class(
+        response=video_data,
+        mimetype='video/mp4'
+    )
+
+@app.route('/make-video-url', methods=['POST'])
+def make_video_url():
+    data = request.json
+    text = data['text']
+    uid = str(uuid.uuid4())[:8]
+    out_path = f"{VIDEO_DIR}/{uid}.mp4"
+
+    create_video(text, out_path)
 
     base_url = request.host_url.rstrip('/')
     video_url = f"{base_url}/video/{uid}.mp4"
