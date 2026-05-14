@@ -10,9 +10,9 @@ VIDEO_DIR = "/tmp/videos"
 os.makedirs(VIDEO_DIR, exist_ok=True)
 
 cloudinary.config(
-    cloud_name = "YOUR_CLOUD_NAME",
-    api_key = "YOUR_API_KEY",
-    api_secret = "YOUR_API_SECRET"
+    cloud_name = "daphufs3c",
+    api_key = "386948418168994",
+    api_secret = "NpuA97HC5Iv4U496CS6AXWSmaY8"
 )
 
 def create_video(text, out_path):
