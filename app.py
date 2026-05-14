@@ -1,11 +1,19 @@
 import subprocess, os, uuid
+import cloudinary
+import cloudinary.uploader
 from flask import Flask, request, send_file
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
 
-app = Flask(__name__)
+app = Flask(name)
 VIDEO_DIR = "/tmp/videos"
 os.makedirs(VIDEO_DIR, exist_ok=True)
+
+cloudinary.config(
+    cloud_name = "YOUR_CLOUD_NAME",
+    api_key = "YOUR_API_KEY",
+    api_secret = "YOUR_API_SECRET"
+)
 
 def create_video(text, out_path):
     uid = str(uuid.uuid4())[:8]
@@ -81,18 +89,25 @@ def make_video_url():
     data = request.json
     text = data['text']
     uid = str(uuid.uuid4())[:8]
-    out_path = f"{VIDEO_DIR}/{uid}.mp4"
+    out_path = f"/tmp/{uid}.mp4"
 
     create_video(text, out_path)
 
-    base_url = request.host_url.rstrip('/')
-    video_url = f"{base_url}/video/{uid}.mp4"
-    return {'url': video_url}
+    result = cloudinary.uploader.upload(
+        out_path,
+        resource_type="video",
+        public_id=uid,
+        overwrite=True
+    )
+
+    os.remove(out_path)
+
+    return {'url': result['secure_url']}
 
 @app.route('/video/<filename>', methods=['GET'])
 def serve_video(filename):
     path = os.path.join(VIDEO_DIR, filename)
     return send_file(path, mimetype='video/mp4')
 
-if __name__ == '__main__':
+if name == 'main':
     app.run(host='0.0.0.0', port=10000)
