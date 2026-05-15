@@ -2,8 +2,12 @@ import subprocess, os, uuid
 import cloudinary
 import cloudinary.uploader
 from flask import Flask, request, send_file
+import logging
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(name)
 
 app = Flask(name)
 VIDEO_DIR = "/tmp/videos"
@@ -93,16 +97,22 @@ def make_video_url():
 
     create_video(text, out_path)
 
-    result = cloudinary.uploader.upload(
-        out_path,
-        resource_type="video",
-        public_id=uid,
-        overwrite=True
-    )
-
-    os.remove(out_path)
-
-    return {'url': result['secure_url']}
+    try:
+        logger.info("Uploading to Cloudinary...")
+        result = cloudinary.uploader.upload(
+            out_path,
+            resource_type="video",
+            public_id=uid,
+            overwrite=True
+        )
+        os.remove(out_path)
+        logger.info(f"Cloudinary URL: {result['secure_url']}")
+        return {'url': result['secure_url']}
+    except Exception as e:
+        logger.error(f"Cloudinary upload failed: {str(e)}")
+        if os.path.exists(out_path):
+            os.remove(out_path)
+        return {'error': str(e)}, 500
 
 @app.route('/video/<filename>', methods=['GET'])
 def serve_video(filename):
