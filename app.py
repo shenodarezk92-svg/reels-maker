@@ -1,4 +1,4 @@
-import subprocess, os, uuid
+import subprocess, os, uuid, time
 import cloudinary
 import cloudinary.uploader
 from flask import Flask, request, send_file
@@ -103,7 +103,9 @@ def make_video_url():
             out_path,
             resource_type="video",
             public_id=uid,
-            overwrite=True
+            overwrite=True,
+            invalidate=True,
+            expires_at=int(time.time()) + 600
         )
         os.remove(out_path)
         logger.info(f"Cloudinary URL: {result['secure_url']}")
