@@ -7,9 +7,9 @@ from PIL import Image, ImageDraw, ImageFont
 import textwrap
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(name)
+logger = logging.getLogger(__name__)
 
-app = Flask(name)
+app = Flask(__name__)
 VIDEO_DIR = "/tmp/videos"
 os.makedirs(VIDEO_DIR, exist_ok=True)
 
@@ -119,5 +119,5 @@ def serve_video(filename):
     path = os.path.join(VIDEO_DIR, filename)
     return send_file(path, mimetype='video/mp4')
 
-if name == 'main':
+if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
