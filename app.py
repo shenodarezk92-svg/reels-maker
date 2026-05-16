@@ -53,10 +53,12 @@ def create_video(text, out_path):
     ]
     subprocess.run(cmd, check=True)
     os.remove(img_path)
+
 @app.route('/files', methods=['GET'])
 def list_files():
     files = os.listdir('.')
     return {'files': files}
+
 @app.route('/make-video', methods=['POST'])
 def make_video():
     data = request.json
@@ -71,6 +73,7 @@ def make_video():
         response=video_data,
         mimetype='video/mp4'
     )
+
 @app.route('/make-video-url', methods=['POST'])
 def make_video_url():
     data = request.json
@@ -94,12 +97,23 @@ def make_video_url():
         if os.path.exists(out_path):
             os.remove(out_path)
         return {'error': str(e)}, 500
+
 @app.route('/video/<filename>', methods=['GET'])
 def serve_video(filename):
     path = os.path.join(VIDEO_DIR, filename)
     return send_file(path, mimetype='video/mp4')
+
 @app.route('/tiktokvgq7fMlk6rVDTpCUyKwNOIONQ8IgEs4D.txt', methods=['GET'])
 def tiktok_verify():
-    return 'tiktokvgq7fMlk6rVDTpCUyKwNOIONQ8IgEs4D', 200, {'Content-Type': 'text/plain'}
+    return 'tiktokvgq7fMlk6rVDTpCUyKwNOIONQ8IgEs4D\n', 200, {'Content-Type': 'text/plain; charset=utf-8'}
+
+@app.route('/.well-known/tiktokvgq7fMlk6rVDTpCUyKwNOIONQ8IgEs4D.txt', methods=['GET'])
+def tiktok_verify_wellknown():
+    return 'tiktokvgq7fMlk6rVDTpCUyKwNOIONQ8IgEs4D\n', 200, {'Content-Type': 'text/plain; charset=utf-8'}
+
+@app.route('/', methods=['GET'])
+def index():
+    return 'OK', 200
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
