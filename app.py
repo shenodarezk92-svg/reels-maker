@@ -22,36 +22,28 @@ cloudinary.config(
 def create_video(text, out_path, bg_file="bg.jpg", music_file="music.mp3", font_color="white"):
     uid = str(uuid.uuid4())[:8]
     img_path = f"/tmp/{uid}.png"
-
     img = Image.open(bg_file).convert("RGB")
     img = img.resize((1080, 1920))
-
     if font_color == "white":
         overlay = Image.new("RGBA", img.size, (0, 0, 0, 100))
         img = img.convert("RGBA")
         img = Image.alpha_composite(img, overlay)
-    
     img = img.convert("RGB")
     draw = ImageDraw.Draw(img)
-
     try:
         font = ImageFont.truetype("font.otf", 70)
     except:
         font = ImageFont.load_default()
-
     lines = textwrap.wrap(text, width=20)
     total_height = len(lines) * 90
     y = (1920 - total_height) // 2
-
     for line in lines:
         bbox = draw.textbbox((0, 0), line, font=font)
         w = bbox[2] - bbox[0]
         x = (1080 - w) // 2
         draw.text((x, y), line, font=font, fill=font_color)
         y += 90
-
     img.save(img_path)
-
     cmd = [
         "ffmpeg", "-y",
         "-loop", "1", "-i", img_path,
@@ -82,10 +74,25 @@ def make_video():
     with open(out_path, 'rb') as f:
         video_data = f.read()
     os.remove(out_path)
-    return app.response_class(
-        response=video_data,
-        mimetype='video/mp4'
-    )
+    return app.response_class(response=video_data, mimetype='video/mp4')
+
+@app.route('/make-video-url', methods=['POST'])
+def make_video_url():
+    data = request.json
+    text = data['text']
+    uid = str(uuid.uuid4())[:8]
+    out_path = f"/tmp/{uid}.mp4"
+    create_video(text, out_path)
+    try:
+        logger.info("Uploading to Cloudinary...")
+        result = cloudinary.uploader.upload(out_path, resource_type="video", public_id=uid, overwrite=True)
+        os.remove(out_path)
+        return {'url': result['secure_url']}
+    except Exception as e:
+        logger.error(f"Cloudinary upload failed: {str(e)}")
+        if os.path.exists(out_path):
+            os.remove(out_path)
+        return {'error': str(e)}, 500
 
 @app.route('/make-video2', methods=['POST'])
 def make_video2():
@@ -97,28 +104,19 @@ def make_video2():
     with open(out_path, 'rb') as f:
         video_data = f.read()
     os.remove(out_path)
-    return app.response_class(
-        response=video_data,
-        mimetype='video/mp4'
-    )
+    return app.response_class(response=video_data, mimetype='video/mp4')
 
-@app.route('/make-video-url', methods=['POST'])
-def make_video_url():
+@app.route('/make-video-url2', methods=['POST'])
+def make_video_url2():
     data = request.json
     text = data['text']
     uid = str(uuid.uuid4())[:8]
     out_path = f"/tmp/{uid}.mp4"
-    create_video(text, out_path)
+    create_video(text, out_path, bg_file="bg2.jpg", music_file="music2.mp3", font_color="black")
     try:
         logger.info("Uploading to Cloudinary...")
-        result = cloudinary.uploader.upload(
-            out_path,
-            resource_type="video",
-            public_id=uid,
-            overwrite=True
-        )
+        result = cloudinary.uploader.upload(out_path, resource_type="video", public_id=uid, overwrite=True)
         os.remove(out_path)
-        logger.info(f"Cloudinary URL: {result['secure_url']}")
         return {'url': result['secure_url']}
     except Exception as e:
         logger.error(f"Cloudinary upload failed: {str(e)}")
