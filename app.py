@@ -19,16 +19,18 @@ cloudinary.config(
     api_secret = "NpuA97HC5Iv4U496CS6AXWSmaY8"
 )
 
-def create_video(text, out_path):
+def create_video(text, out_path, bg_file="bg.jpg", music_file="music.mp3", font_color="white"):
     uid = str(uuid.uuid4())[:8]
     img_path = f"/tmp/{uid}.png"
 
-    img = Image.open("bg.jpg").convert("RGB")
+    img = Image.open(bg_file).convert("RGB")
     img = img.resize((1080, 1920))
 
-    overlay = Image.new("RGBA", img.size, (0, 0, 0, 100))
-    img = img.convert("RGBA")
-    img = Image.alpha_composite(img, overlay)
+    if font_color == "white":
+        overlay = Image.new("RGBA", img.size, (0, 0, 0, 100))
+        img = img.convert("RGBA")
+        img = Image.alpha_composite(img, overlay)
+    
     img = img.convert("RGB")
     draw = ImageDraw.Draw(img)
 
@@ -45,7 +47,7 @@ def create_video(text, out_path):
         bbox = draw.textbbox((0, 0), line, font=font)
         w = bbox[2] - bbox[0]
         x = (1080 - w) // 2
-        draw.text((x, y), line, font=font, fill="white")
+        draw.text((x, y), line, font=font, fill=font_color)
         y += 90
 
     img.save(img_path)
@@ -53,7 +55,7 @@ def create_video(text, out_path):
     cmd = [
         "ffmpeg", "-y",
         "-loop", "1", "-i", img_path,
-        "-i", "music.mp3",
+        "-i", music_file,
         "-c:v", "libx264",
         "-preset", "ultrafast",
         "-c:a", "aac",
@@ -76,13 +78,25 @@ def make_video():
     text = data['text']
     uid = str(uuid.uuid4())[:8]
     out_path = f"/tmp/{uid}.mp4"
-
     create_video(text, out_path)
-
     with open(out_path, 'rb') as f:
         video_data = f.read()
     os.remove(out_path)
+    return app.response_class(
+        response=video_data,
+        mimetype='video/mp4'
+    )
 
+@app.route('/make-video2', methods=['POST'])
+def make_video2():
+    data = request.json
+    text = data['text']
+    uid = str(uuid.uuid4())[:8]
+    out_path = f"/tmp/{uid}.mp4"
+    create_video(text, out_path, bg_file="bg2.jpg", music_file="music2.mp3", font_color="black")
+    with open(out_path, 'rb') as f:
+        video_data = f.read()
+    os.remove(out_path)
     return app.response_class(
         response=video_data,
         mimetype='video/mp4'
@@ -94,9 +108,7 @@ def make_video_url():
     text = data['text']
     uid = str(uuid.uuid4())[:8]
     out_path = f"/tmp/{uid}.mp4"
-
     create_video(text, out_path)
-
     try:
         logger.info("Uploading to Cloudinary...")
         result = cloudinary.uploader.upload(
